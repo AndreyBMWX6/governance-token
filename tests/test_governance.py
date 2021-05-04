@@ -26,6 +26,7 @@ def test_governance_token_mint(accounts, token):
     assert token_balance_after - token_balance_before == 0
 
 def test_governance_token_requestETH(accounts, token_with_balances):
+    # info about balances can be seen in `conftest.py`
     accounts[5].transfer(token_with_balances, 1000)
     
     acc1_balance_before = accounts[1].balance()
@@ -42,6 +43,24 @@ def test_governance_token_requestETH(accounts, token_with_balances):
     token_with_balances.requestETH({'from': accounts[3]})
     acc3_balance_after = accounts[3].balance()
     assert acc3_balance_after - acc3_balance_before == 200
+
+def test_governance_token_transfer(accounts, token_with_balances):
+    assert token_with_balances.balanceOf(accounts[1]) >= 10
+    
+    token_balance_before = token_with_balances.balanceOf(accounts[2])
+    token_with_balances.transfer(accounts[2], 10, {'from': accounts[1]})
+    token_balance_after = token_with_balances.balanceOf(accounts[2])
+    assert token_balance_after - token_balance_before == 10
+
+def test_governance_token_transferFrom(accounts, token_with_allowances):
+    # allowances can be seen in asserts or in `conftest.py`
+    assert token_with_allowances.balanceOf(accounts[1]) >= 10
+    assert token_with_allowances.allowance(accounts[1], accounts[2]) >= 10
+
+    token_balance_before = token_with_allowances.balanceOf(accounts[2])
+    token_with_allowances.transferFrom(accounts[1], accounts[2], 10, {'from': accounts[2]})
+    token_balance_after = token_with_allowances.balanceOf(accounts[2])
+    assert token_balance_after - token_balance_before == 10
 
 def test_governance_token_countETHShare(accounts, token_with_balances):
     '''func returns: hasNewETH, ETH, lastProcessedEmissionNum parameters
@@ -63,10 +82,54 @@ def test_governance_token_countETHShare(accounts, token_with_balances):
     result = token_with_balances.countETHShare(accounts[1], {'from': accounts[1]})
     assert result.return_value == (True, 500, 1)
 
-def test_add_new_account(accounts, token_with_balances):
-    token_with_balances.mint(accounts[4], 25)
+def test_mint_redistribution(accounts, token_with_balances):
     accounts[5].transfer(token_with_balances, 1000)
-    balance_before = accounts[4].balance()
+    balance_before = accounts[1].balance()
+    # we pay all collected ETH before minting
+    token_with_balances.mint(accounts[4], 100)
+    balance_after = accounts[1].balance()
+    assert balance_after - balance_before == 500
+    
+    accounts[5].transfer(token_with_balances, 1000)
+    balance_before = accounts[4].balance()    
     token_with_balances.requestETH({'from': accounts[4]})
     balance_after = accounts[4].balance()
-    assert balance_after - balance_before == 200
+    # after minting account[4] share is 50% 
+    assert balance_after - balance_before == 500
+    
+    balance_before = accounts[1].balance()
+    token_with_balances.requestETH({'from': accounts[1]})
+    balance_after = accounts[1].balance()
+    assert balance_after - balance_before == 250
+
+def test_transfer_redistribution(accounts, token_with_balances):
+    # info for tester(can be seen in `conftest.py`)
+    assert token_with_balances.totalSupply() == 100
+    assert token_with_balances.balanceOf(accounts[1]) == 50
+    assert token_with_balances.balanceOf(accounts[2]) == 30
+
+    accounts[5].transfer(token_with_balances, 1000)
+
+    acc1_balance_before_transfer = accounts[1].balance()
+    acc2_balance_before_transfer = accounts[2].balance()
+
+    # we pay all collected ETH before transfer    
+    token_with_balances.transfer(accounts[2], 10, {'from': accounts[1]})
+    
+    acc1_balance_after_transfer = accounts[1].balance()
+    acc2_balance_after_transfer = accounts[2].balance()
+
+    assert acc1_balance_after_transfer - acc1_balance_before_transfer == 500
+    assert acc2_balance_after_transfer - acc2_balance_before_transfer == 300
+
+    accounts[5].transfer(token_with_balances, 1000)
+
+    token_with_balances.requestETH({'from': accounts[1]})
+    token_with_balances.requestETH({'from': accounts[2]})
+
+    acc1_balance_after_request = accounts[1].balance()
+    acc2_balance_after_request = accounts[2].balance()
+
+    # testing ETH distribution with new token balances
+    assert acc1_balance_after_request - acc1_balance_after_transfer == 400
+    assert acc2_balance_after_request - acc2_balance_after_transfer == 400

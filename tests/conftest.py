@@ -21,3 +21,8 @@ def token_with_balances(token, accounts):
     token.mint(accounts[2], 30)
     token.mint(accounts[3], 20)
     return token
+
+@pytest.fixture(scope="module")
+def token_with_allowances(token, accounts):
+    token.approve(accounts[2], 10, {'from': accounts[1]})
+    return token
