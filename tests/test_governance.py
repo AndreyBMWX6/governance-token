@@ -140,3 +140,38 @@ def test_transfer_redistribution(accounts, token_with_balances):
     # testing ETH distribution with new token balances
     assert acc1_balance_after_request - acc1_balance_after_transfer == 400
     assert acc2_balance_after_request - acc2_balance_after_transfer == 400
+
+def test_double_spend(accounts, token_with_balances):
+    # got new ETH
+    accounts[5].transfer(token_with_balances, 1000)
+
+    # requesting ETH
+    balance_before = accounts[1].balance()
+    token_with_balances.requestETH({'from': accounts[1]})
+    balance_after = accounts[1].balance()
+    assert balance_after - balance_before == 500
+
+    # no new ETH payed to contract, old ETH is payed; 
+    # requesting ETH one more time, should get 0
+    balance_before = accounts[1].balance()
+    token_with_balances.requestETH({'from': accounts[1]})
+    balance_after = accounts[1].balance()
+    assert balance_after - balance_before == 0
+
+    balance_before = accounts[1].balance()
+    token_with_balances.requestETH({'from': accounts[1]})
+    balance_after = accounts[1].balance()
+    assert balance_after - balance_before == 0
+
+def test_uneven_distribution(accounts, token_with_uneven_distribution):
+    accounts[5].transfer(token_with_uneven_distribution, 100000000000000000)
+
+    acc1_balance_before = accounts[1].balance()
+    token_with_uneven_distribution.requestETH({'from': accounts[1]})
+    acc1_balance_after = accounts[1].balance()
+    assert acc1_balance_after - acc1_balance_before == 99999999999999999
+
+    acc2_balance_before = accounts[2].balance()
+    token_with_uneven_distribution.requestETH({'from': accounts[2]})
+    acc2_balance_after = accounts[2].balance()
+    assert acc2_balance_after - acc2_balance_before == 1

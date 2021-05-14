@@ -22,7 +22,14 @@ def token_with_balances(token, accounts):
     token.mint(accounts[3], 20)
     return token
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def token_with_allowances(token, accounts):
     token.approve(accounts[2], 10, {'from': accounts[1]})
+    return token
+
+@pytest.fixture(scope="function")
+def token_with_uneven_distribution(GovernanceToken, accounts):
+    token = GovernanceToken.deploy({'from': accounts[0]})    
+    token.mint(accounts[1], 99999999999999999)
+    token.mint(accounts[2], 1)
     return token
