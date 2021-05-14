@@ -84,23 +84,30 @@ def test_governance_token_countETHShare(accounts, token_with_balances):
 
 def test_mint_redistribution(accounts, token_with_balances):
     accounts[5].transfer(token_with_balances, 1000)
-    balance_before = accounts[1].balance()
-    # we pay all collected ETH before minting
+    
+    # before minting accounts[1] have 50% of tokens so his ETH share is 500
+    result = token_with_balances.countETHShare(accounts[1], {'from': accounts[1]})
+    assert result.return_value[1] == 500
+
     token_with_balances.mint(accounts[4], 100)
-    balance_after = accounts[1].balance()
-    assert balance_after - balance_before == 500
     
     accounts[5].transfer(token_with_balances, 1000)
+    # after minting accounts[1] have 25% of tokens so his share of new ETH is 250
+    # total accounts[1] share is 500 + 250 = 750
+    result = token_with_balances.countETHShare(accounts[1], {'from': accounts[1]})
+    assert result.return_value[1] == 750
+
     balance_before = accounts[4].balance()    
     token_with_balances.requestETH({'from': accounts[4]})
     balance_after = accounts[4].balance()
-    # after minting account[4] share is 50% 
+    # after minting accounts[4] has 50% of tokens so he gets 500
+    # we don't pay old ETH to accounts[4] because he didn't have tokens when we got it
     assert balance_after - balance_before == 500
     
     balance_before = accounts[1].balance()
     token_with_balances.requestETH({'from': accounts[1]})
     balance_after = accounts[1].balance()
-    assert balance_after - balance_before == 250
+    assert balance_after - balance_before == 750
 
 def test_transfer_redistribution(accounts, token_with_balances):
     # info for tester(can be seen in `conftest.py`)

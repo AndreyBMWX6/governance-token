@@ -27,9 +27,6 @@ contract GovernanceToken is ERC20('GovernanceToken', 'GOV'), Ownable {
 
     EmissionInfo[] public emissions;
 
-    // accounts with tokens
-    address[] accounts;
-
     mapping(address => uint256) lastAccountEmission;
     mapping(address => uint256) lastTotalBalance;
 
@@ -58,15 +55,9 @@ contract GovernanceToken is ERC20('GovernanceToken', 'GOV'), Ownable {
     /// @dev creates _amount tokens and assigns them to _for insreasing totalSupply
     function mint(address _for, uint256 _amount) onlyOwner public payable {
         require(msg.sender != address(0));
-        // paying ETH to all acounts, that already have tokens
-        for (uint256 i = 0; i < accounts.length; i++) {
-            this.payETH(accounts[i]);
-        }
+        // before minting we pay ETH to acount we mint tokens for
+        this.payETH(_for);
         
-        // if account doesn't have tokens, it's added to accounts list
-        if (balanceOf(_for) == 0)
-            accounts.push(_for);
-
         // changing account info to an actual state of contract 
         lastAccountEmission[_for] = getLastEmissionNum();
         lastTotalBalance[_for] = totalETH;
@@ -88,9 +79,6 @@ contract GovernanceToken is ERC20('GovernanceToken', 'GOV'), Ownable {
 
     /// @notice hook on standard ERC20#transfer to pay dividends
     function transfer(address _to, uint256 _value) public override returns (bool) {
-        if (balanceOf(_to) == 0)
-            accounts.push(_to);
-
         this.payETH(msg.sender);
         this.payETH(_to);
         return super.transfer(_to, _value);
@@ -98,9 +86,6 @@ contract GovernanceToken is ERC20('GovernanceToken', 'GOV'), Ownable {
 
     /// @notice hook on standard ERC20#transferFrom to pay dividends
     function transferFrom(address _from, address _to, uint256 _value) public override returns (bool) {
-        if (balanceOf(_to) == 0)
-            accounts.push(_to);
-
         this.payETH(_from);
         this.payETH(_to);
         return super.transferFrom(_from, _to, _value);
